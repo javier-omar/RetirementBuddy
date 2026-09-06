@@ -45,8 +45,18 @@ function ensure(): Promise<void> {
   if (!ready) ready = loadData().then((d) => { data = d; });
   return ready;
 }
+
+// Subscribers notified after any change that's persisted (used by optional
+// file auto-save). Kept tiny and dependency-free.
+const changeListeners = new Set<() => void>();
+export function onDataChange(cb: () => void): () => void {
+  changeListeners.add(cb);
+  return () => changeListeners.delete(cb);
+}
+
 async function persist(): Promise<void> {
   await saveData(data);
+  changeListeners.forEach((cb) => { try { cb(); } catch { /* ignore */ } });
 }
 const nextId = (): number => data.seq++;
 

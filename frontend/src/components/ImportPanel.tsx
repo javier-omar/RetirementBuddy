@@ -1,11 +1,22 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { ImportBatch } from "../types";
 import InfoTip from "./InfoTip";
+import * as fileSync from "../lib/fileSync";
+import type { SyncStatus } from "../lib/fileSync";
 
 interface Props {
   imports: ImportBatch[];
   onChanged: () => void;
+}
+
+function relTime(ts: number): string {
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 10) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function ImportPanel({ imports, onChanged }: Props) {
@@ -13,8 +24,27 @@ export default function ImportPanel({ imports, onChanged }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [backupMsg, setBackupMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [sync, setSync] = useState<SyncStatus | null>(null);
+  const [syncMsg, setSyncMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (fileSync.isSupported()) fileSync.getStatus().then(setSync);
+  }, []);
+
+  async function runSync(fn: () => Promise<SyncStatus | void>, ok: string) {
+    setSyncMsg(null);
+    try {
+      const s = await fn();
+      if (s) setSync(s); else setSync(await fileSync.getStatus());
+      setSyncMsg({ kind: "ok", text: ok });
+    } catch (e) {
+      const m = (e as Error).message || "";
+      if (/abort/i.test(m)) return; // user cancelled the picker — no error
+      setSyncMsg({ kind: "error", text: m });
+    }
+  }
 
   async function upload(file: File) {
     setBusy(true);
@@ -191,6 +221,80 @@ export default function ImportPanel({ imports, onChanged }: Props) {
           <strong>Moving to a new phone or computer?</strong> Download the backup here, send the file to
           yourself (email, iCloud, Dropbox…), open this app there, and use <em>Restore</em>.
         </p>
+
+        {fileSync.isSupported() && (
+          <>
+            <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "16px 0" }} />
+            <h3 style={{ fontSize: 14 }}>
+              Sync to a file
+              <InfoTip align="left" text="Connect one backup file on your computer and keep it up to date with a click — or automatically. Put that file in a Google Drive, Dropbox, iCloud Drive, or OneDrive folder and your computer syncs it to the cloud for you; the app itself still uploads nothing." />
+            </h3>
+            <p className="sub" style={{ marginTop: 0 }}>
+              Keep a backup file that stays current automatically. Save it inside a Google Drive / Dropbox /
+              iCloud Drive folder and your computer syncs it to the cloud — nothing is uploaded by the app.
+              Available in Chrome &amp; Edge on desktop.
+            </p>
+
+            {!sync?.connected ? (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button className="btn" onClick={() => runSync(fileSync.connect, "Backup file connected — it'll stay in sync.")}>
+                  🔗 Connect a backup file
+                </button>
+                <button
+                  className="btn ghost"
+                  onClick={() => runSync(async () => {
+                    const json = await fileSync.openFrom();
+                    if (!confirm("Restore replaces everything in this browser with the chosen file. Continue?")) return fileSync.getStatus();
+                    await api.importBackup(json);
+                    setTimeout(() => window.location.reload(), 500);
+                  }, "Restored from file. Reloading…")}
+                >
+                  Restore from a file…
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="banner ok" style={{ marginBottom: 10 }}>
+                  <span>🔗</span>
+                  <span>
+                    Connected: <strong>{sync.name}</strong>
+                    {sync.lastSaved ? ` · saved ${relTime(sync.lastSaved)}` : ""}
+                    {sync.autoSave ? " · auto-saving on" : ""}
+                  </span>
+                </div>
+                {sync.permission !== "granted" && (
+                  <div className="banner warn" style={{ marginBottom: 10 }}>
+                    <span>⚠️</span>
+                    <span>
+                      Reconnect to let this browser write the file again.{" "}
+                      <button className="btn sm" style={{ marginLeft: 6 }}
+                        onClick={() => runSync(fileSync.reconnect, "Reconnected — auto-save is active again.")}>
+                        Reconnect
+                      </button>
+                    </span>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <button className="btn" onClick={() => runSync(fileSync.saveNow, "Saved to your backup file.")}>Save now</button>
+                  <label className="toggle">
+                    <input type="checkbox" checked={sync.autoSave}
+                      onChange={async (e) => { await fileSync.setAutoSave(e.target.checked); setSync(await fileSync.getStatus()); }} />
+                    Auto-save on every change
+                  </label>
+                  <button className="btn ghost sm" onClick={() => runSync(async () => { await fileSync.disconnect(); }, "Disconnected. Your file is untouched.")}>
+                    Disconnect
+                  </button>
+                </div>
+              </>
+            )}
+            {syncMsg && (
+              <div className={`banner ${syncMsg.kind}`} style={{ marginTop: 12 }}>
+                <span>{syncMsg.kind === "ok" ? "✅" : "⚠️"}</span><span>{syncMsg.text}</span>
+              </div>
+            )}
+          </>
+        )}
+
         <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "16px 0" }} />
         <button
           className="btn danger"

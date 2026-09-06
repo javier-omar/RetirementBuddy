@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import { useTheme } from "./theme";
+import { startAutoSaveWatcher } from "./lib/fileSync";
 import ImportPanel from "./components/ImportPanel";
 import Dashboard from "./components/Dashboard";
 import Projections from "./components/Projections";
@@ -75,6 +76,7 @@ export default function App() {
   useEffect(() => {
     load();
     api.isOnboarded().then(setOnboarded);
+    startAutoSaveWatcher(); // silently keeps a connected backup file current
   }, [load]);
 
   const hasData = !!summary && summary.market_value !== 0;
