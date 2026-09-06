@@ -317,6 +317,28 @@ export const api = {
     ) as unknown as DrawdownScenariosResult;
   },
 
+  // ---- sample / demo data -------------------------------------------------- //
+  loadSample: async (): Promise<void> => {
+    await ensure();
+    const { sampleCsv, sampleAssumptions, sampleSSBenefits, sampleOtherAssets, sampleLoans } =
+      await import("./lib/sampleData");
+    // Fresh slate, then seed a full demo across every tab.
+    data = emptyData();
+    const rows = parseFile(sampleCsv());
+    const batchId = nextId();
+    for (const r of rows) data.transactions.push({ id: nextId(), batch_id: batchId, ...r } as TxnRecord);
+    data.batches.push({
+      id: batchId, filename: "sample-401k.csv", imported_at: new Date().toISOString(),
+      row_count: rows.length, new_count: rows.length, duplicate_count: 0,
+    });
+    data.assumptions = { ...sampleAssumptions };
+    data.ssBenefits = sampleSSBenefits.map((b) => ({ ...b }));
+    data.otherAssets = sampleOtherAssets.map((a) => ({ ...a, id: nextId() }));
+    data.loans = sampleLoans.map((l) => ({ ...l, id: nextId() }));
+    data.onboarded = true;
+    await persist();
+  },
+
   // ---- onboarding ---------------------------------------------------------- //
   isOnboarded: async (): Promise<boolean> => { await ensure(); return !!data.onboarded; },
   setOnboarded: async (v = true): Promise<void> => { await ensure(); data.onboarded = v; await persist(); },
@@ -331,4 +353,7 @@ export const api = {
     await persist();
   },
   hasData: async (): Promise<boolean> => { await ensure(); return data.transactions.length > 0; },
+
+  /** Wipe everything on this device and return to a fresh install. */
+  resetAll: async (): Promise<void> => { await ensure(); data = emptyData(); await persist(); },
 };

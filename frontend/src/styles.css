@@ -201,9 +201,12 @@ details.adv .adv-body { padding: 2px 13px 14px; }
 .two-col.wide-left { grid-template-columns: minmax(340px, 460px) 1fr; }
 @media (max-width: 760px) { .two-col.wide-left { grid-template-columns: 1fr; } }
 
-.field { display: flex; flex-direction: column; gap: 5px; }
+/* min-width:0 lets these grid items shrink below the input's intrinsic width,
+   so inputs never overflow their section box in narrow columns. */
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .field label { font-size: 12px; color: var(--muted); font-weight: 600; }
 .field input, .field select {
+  width: 100%; min-width: 0; box-sizing: border-box;
   background: var(--bg-elev); border: 1px solid var(--border); border-radius: 9px; color: var(--text);
   padding: 9px 11px; font-size: 14px; font-variant-numeric: tabular-nums;
 }

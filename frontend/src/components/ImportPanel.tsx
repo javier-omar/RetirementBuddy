@@ -191,6 +191,20 @@ export default function ImportPanel({ imports, onChanged }: Props) {
           <strong>Moving to a new phone or computer?</strong> Download the backup here, send the file to
           yourself (email, iCloud, Dropbox…), open this app there, and use <em>Restore</em>.
         </p>
+        <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "16px 0" }} />
+        <button
+          className="btn danger"
+          onClick={async () => {
+            if (!confirm("This permanently clears all data in this browser (transactions, settings, sample data) and starts over. This can't be undone. Continue?")) return;
+            await api.resetAll();
+            window.location.reload();
+          }}
+        >
+          Clear all data &amp; start over
+        </button>
+        <p className="sub" style={{ marginTop: 8 }}>
+          Wipes everything on this device and returns to setup. Download a backup first if you might want it back.
+        </p>
       </div>
     </div>
   );

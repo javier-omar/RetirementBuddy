@@ -65,6 +65,17 @@ export default function Onboarding({ onFinish }: { onFinish: () => void }) {
     }
   }
 
+  async function loadSample() {
+    setBusy(true); setErr(null);
+    try {
+      await api.loadSample();
+      onFinish();
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
+  }
+
   async function finish() {
     setBusy(true); setErr(null);
     try {
@@ -146,13 +157,20 @@ export default function Onboarding({ onFinish }: { onFinish: () => void }) {
               </span>
             </div>
             <div className="onb-actions">
-              <button className="btn" onClick={next}>Get started →</button>
+              <button className="btn" onClick={next} disabled={busy}>Get started →</button>
+              <button className="btn ghost" onClick={loadSample} disabled={busy}>
+                {busy ? "Loading…" : "Explore with sample data"}
+              </button>
               <button className="btn ghost" onClick={() => restoreRef.current?.click()} disabled={busy}>
                 Restore a backup
               </button>
               <input ref={restoreRef} type="file" accept=".json,application/json" style={{ display: "none" }}
                 onChange={(e) => e.target.files?.[0] && restore(e.target.files[0])} />
             </div>
+            <p className="sub" style={{ marginTop: 12 }}>
+              Sample data lets you look around with a made-up saver's numbers — you can clear it and start
+              fresh anytime.
+            </p>
             <button className="onb-skip" onClick={() => { api.setOnboarded(true).then(onFinish); }}>
               Skip setup — I'll explore on my own
             </button>
