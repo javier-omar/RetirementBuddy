@@ -279,6 +279,40 @@ details.adv .adv-body { padding: 2px 13px 14px; }
 .recharts-default-tooltip { background: var(--card) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; }
 .recharts-tooltip-label { color: var(--muted) !important; }
 
+/* ============================ Onboarding wizard ============================ */
+.onb-overlay {
+  position: fixed; inset: 0; z-index: 100; overflow-y: auto;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 6vh 16px 40px;
+  background: radial-gradient(1000px 500px at 80% -10%, var(--body-glow) 0%, var(--bg) 55%) no-repeat, var(--bg);
+}
+.onb-card { width: 100%; max-width: 560px; }
+.onb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.onb-progress { font-size: 12px; color: var(--muted); font-weight: 600; }
+.onb-dots { display: flex; gap: 6px; margin-bottom: 20px; }
+.onb-dot { height: 4px; flex: 1; border-radius: 999px; background: var(--border); transition: background 0.2s; }
+.onb-dot.on { background: var(--accent); }
+.onb-body h2 { margin: 0 0 6px; font-size: 22px; }
+.onb-lead { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+.onb-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.onb-skip {
+  display: block; margin: 18px auto 0; background: none; border: 0; color: var(--muted);
+  font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}
+.onb-skip:hover { color: var(--text); }
+.onb-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .onb-choice { grid-template-columns: 1fr; } }
+.onb-opt {
+  text-align: left; display: flex; flex-direction: column; gap: 5px; cursor: pointer;
+  background: var(--bg-elev); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px;
+  color: var(--text); transition: border-color 0.15s, background 0.15s;
+}
+.onb-opt:hover { border-color: var(--accent); }
+.onb-opt.sel { border-color: var(--accent); background: var(--tint-hover); }
+.onb-opt strong { font-size: 14px; }
+.onb-opt span { font-size: 12px; color: var(--muted); }
+.onb-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 26px; }
+
 /* ============================ Responsive ============================ */
 /* Tablet and below */
 @media (max-width: 820px) {

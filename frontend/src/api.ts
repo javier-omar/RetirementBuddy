@@ -109,7 +109,11 @@ const loadBrackets = (): engine.BracketRow[] =>
   [...data.taxBrackets].sort((a, b) => a.threshold - b.threshold).map((r) => ({ threshold: r.threshold, rate: r.rate }));
 
 function currentBalance(): number {
-  return analytics.summary(data.transactions).market_value || 0;
+  // Prefer the balance reconstructed from imported transactions; fall back to a
+  // manually-entered starting balance (from onboarding) when nothing's imported.
+  const fromLedger = analytics.summary(data.transactions).market_value || 0;
+  if (fromLedger > 0) return fromLedger;
+  return mergedAssumptions().starting_balance || 0;
 }
 
 function computeAssumptions(overrides?: Assumptions): Assumptions {
@@ -313,12 +317,17 @@ export const api = {
     ) as unknown as DrawdownScenariosResult;
   },
 
+  // ---- onboarding ---------------------------------------------------------- //
+  isOnboarded: async (): Promise<boolean> => { await ensure(); return !!data.onboarded; },
+  setOnboarded: async (v = true): Promise<void> => { await ensure(); data.onboarded = v; await persist(); },
+
   // ---- backup / restore (local file, for non-technical users) ------------- //
   exportBackup: async (): Promise<string> => { await ensure(); return exportData(data); },
   importBackup: async (json: string): Promise<void> => {
     await ensure();
     data = importData(json);
     data.version = DATA_VERSION;
+    data.onboarded = true; // restoring means an existing setup — skip the wizard
     await persist();
   },
   hasData: async (): Promise<boolean> => { await ensure(); return data.transactions.length > 0; },

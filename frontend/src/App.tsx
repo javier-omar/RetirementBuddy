@@ -10,6 +10,7 @@ import SocialSecurity from "./components/SocialSecurity";
 import EventsTaxes from "./components/EventsTaxes";
 import AssetsDebts from "./components/AssetsDebts";
 import Transactions from "./components/Transactions";
+import Onboarding from "./components/Onboarding";
 import type {
   BalancePoint,
   DataQualityWarning,
@@ -45,6 +46,7 @@ export default function App() {
   const [warnings, setWarnings] = useState<DataQualityWarning[]>([]);
   const [imports, setImports] = useState<ImportBatch[]>([]);
   const [txns, setTxns] = useState<Transaction[]>([]);
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,10 +74,15 @@ export default function App() {
 
   useEffect(() => {
     load();
+    api.isOnboarded().then(setOnboarded);
   }, [load]);
 
   const hasData = !!summary && summary.market_value !== 0;
   const empty = !loading && txns.length === 0;
+
+  if (onboarded === false) {
+    return <Onboarding onFinish={() => { setOnboarded(true); setTab("projections"); load(); }} />;
+  }
 
   return (
     <div className="app">

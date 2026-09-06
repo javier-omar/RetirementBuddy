@@ -46,6 +46,7 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = {
   ss_claim_age: 67,
   ss_annual_benefit: 30000,
   current_salary: 75000,
+  starting_balance: 0, // manual current 401(k) balance when no CSV is imported
   salary_growth: 0.02,
   employee_contrib_pct: 0.1,
   employer_match_pct: 0.5,

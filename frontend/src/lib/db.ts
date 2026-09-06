@@ -31,6 +31,7 @@ export interface LoanRow {
 
 export interface AppData {
   version: number;
+  onboarded: boolean;             // has the first-run wizard been completed/skipped
   transactions: TxnRecord[];
   batches: BatchRecord[];
   assumptions: Assumptions;       // only stored (non-default) values
@@ -47,6 +48,7 @@ export const DATA_VERSION = 1;
 export function emptyData(): AppData {
   return {
     version: DATA_VERSION,
+    onboarded: false,
     transactions: [], batches: [], assumptions: {},
     ssBenefits: [], lifeEvents: [], taxBrackets: [], otherAssets: [], loans: [],
     seq: 1,
