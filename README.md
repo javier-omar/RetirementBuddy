@@ -133,9 +133,10 @@ frontend/
                    SocialSecurity · AssetsDebts · EventsTaxes · Transactions
     api.ts         local data layer (IndexedDB + engine) — same surface the UI always used
     theme.tsx types.ts format.ts styles.css App.tsx
-backend/           legacy FastAPI + SQLite server (no longer required; kept for reference)
+.github/workflows/ deploy.yml — builds and publishes to GitHub Pages
 ```
 
-The `backend/` folder is the original server implementation. The app no longer needs
-it — `frontend/src/lib/` is a faithful TypeScript port of that engine, parser, and
-analytics — but it's kept in the repo as a reference.
+RetirementBuddy started as a FastAPI + SQLite server with a React front end;
+`frontend/src/lib/` is a faithful TypeScript port of that engine, parser, and
+analytics, so the app now runs entirely in the browser with no server. (The old
+backend lives in the project's earlier git history if you ever want to see it.)
