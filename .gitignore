@@ -1,0 +1,26 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+
+# Database (your private financial data — never commit)
+backend/*.db
+
+# Your imported reports (private)
+*.csv
+*.xlsx
+*.numbers
+
+# Exported data backups (contain your private financial data — never commit)
+*backup*.json
+rb-backup*.json
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+
+# TypeScript incremental build cache
+frontend/tsconfig.tsbuildinfo
