@@ -170,6 +170,7 @@ export default function Projections({ hasData }: { hasData: boolean }) {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
   const [ssFromTable, setSsFromTable] = useState<number | null>(null);
+  const [hasBrackets, setHasBrackets] = useState(false);
   const [delta, setDelta] = useState<number | null>(null);
   const didInit = useRef(false);
   const prevPortfolio = useRef<number | null>(null);
@@ -182,6 +183,7 @@ export default function Projections({ hasData }: { hasData: boolean }) {
       setDefaults(r.defaults);
       setSsFromTable(r.ss_benefit_from_table);
     });
+    api.taxBrackets().then((b) => setHasBrackets(b.length > 0));
   }, []);
 
   async function recalc(a: Assumptions, real = realDollars) {
@@ -298,6 +300,8 @@ export default function Projections({ hasData }: { hasData: boolean }) {
     }
     const warn = sanityWarning(f.key, assumptions);
     const derived = derivedHint(f.key, assumptions);
+    // The flat 401(k) rate is only used when no progressive brackets are set.
+    const overridden = f.key === "tax_rate_401k" && hasBrackets;
     return (
       <div className="field" key={f.key}>
         <label>
@@ -324,6 +328,7 @@ export default function Projections({ hasData }: { hasData: boolean }) {
           <span className="hint warn">⚠ {warn}</span>
         ) : (
           <>
+            {overridden && <span className="hint warn">overridden by tax brackets (Events &amp; Taxes)</span>}
             {derived && <span className="hint derived">{derived}</span>}
             {f.hint && <span className="hint">{f.hint}</span>}
           </>

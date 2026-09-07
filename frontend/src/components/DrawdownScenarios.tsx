@@ -28,6 +28,11 @@ interface ScenarioConfig {
 
 const PALETTE = ["#35c88a", "#4f9dff", "#ffb454", "#ff6b6b", "#7c5cff"];
 
+/** Total income tax for a drawdown year (income tax + capital gains + SS tax). */
+function taxOf(r: { tax_401k?: number; tax_capgains?: number; tax_ss?: number; tax_other?: number }): number {
+  return (r.tax_401k ?? 0) + (r.tax_capgains ?? 0) + (r.tax_ss ?? 0) + (r.tax_other ?? 0);
+}
+
 export default function DrawdownScenarios({ hasData }: { hasData: boolean }) {
   const [assumptions, setAssumptions] = useState<Assumptions | null>(null);
   const [scenarios, setScenarios] = useState<ScenarioConfig[]>([]);
@@ -39,6 +44,7 @@ export default function DrawdownScenarios({ hasData }: { hasData: boolean }) {
   const [ssFromTable, setSsFromTable] = useState<number | null>(null);
   const [result, setResult] = useState<DrawdownScenariosResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [detailIdx, setDetailIdx] = useState(0);
   const didInit = useRef(false);
   const c = useChartColors();
 
@@ -355,6 +361,66 @@ export default function DrawdownScenarios({ hasData }: { hasData: boolean }) {
               </div>
             </div>
           </div>
+
+          {/* Year-by-year detail for one scenario */}
+          {(() => {
+            const sel = result.scenarios[Math.min(detailIdx, result.scenarios.length - 1)];
+            if (!sel || sel.drawdown.length === 0) return null;
+            const totalTax = sel.drawdown.reduce((s, r) => s + taxOf(r), 0);
+            return (
+              <div className="card" style={{ marginTop: 16 }}>
+                <h3 style={{ marginBottom: 6 }}>
+                  Year-by-year detail{result.real_dollars ? " (today's dollars)" : ""}
+                  <InfoTip align="left" text="Each retirement year for the selected scenario: gross withdrawal, income tax paid on it (after any tax-free exclusion), Social Security, after-tax income, spending, and ending balance." />
+                </h3>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                  {result.scenarios.map((s, i) => (
+                    <button
+                      key={s.name}
+                      onClick={() => setDetailIdx(i)}
+                      className={`btn sm ${i === detailIdx ? "" : "ghost"}`}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7 }}
+                    >
+                      <span style={{ width: 9, height: 9, borderRadius: 3, background: colorFor(s.name), display: "inline-block" }} />
+                      {s.name.split(" · ")[0]}
+                    </button>
+                  ))}
+                </div>
+                <p className="sub" style={{ marginTop: 0, marginBottom: 12 }}>
+                  Total income tax over retirement: <strong>{usd(totalTax)}</strong>
+                  {sel.drawdown[0].withdrawal > 0 ? ` · first-year effective rate ${pct(taxOf(sel.drawdown[0]) / sel.drawdown[0].withdrawal, 1)}` : ""}.
+                </p>
+                <div style={{ overflowX: "auto", maxHeight: 360, overflowY: "auto" }}>
+                  <table className="data">
+                    <thead>
+                      <tr>
+                        <th className="num">Age</th>
+                        <th className="num">Withdrawal</th>
+                        <th className="num">Taxes</th>
+                        <th className="num">Soc. Sec.</th>
+                        <th className="num">After-tax</th>
+                        <th className="num">Spending</th>
+                        <th className="num">End balance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sel.drawdown.map((r) => (
+                        <tr key={r.age}>
+                          <td className="num">{r.age}</td>
+                          <td className="num">{usd(r.withdrawal)}</td>
+                          <td className="num" style={{ color: taxOf(r) > 0 ? "var(--amber)" : undefined }}>{usd(taxOf(r))}</td>
+                          <td className="num">{r.social_security ? usd(r.social_security) : "—"}</td>
+                          <td className="num">{usd(r.after_tax_income)}</td>
+                          <td className="num">{usd(r.spending)}</td>
+                          <td className="num">{usd(r.end_balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
       {busy && !result && <div className="center-load"><div className="spinner" /> Running scenarios…</div>}
