@@ -92,6 +92,13 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = {
   // Progressive tax (used only when a bracket table exists)
   standard_deduction: 0,
 
+  // Tax-free retirement-income exclusion (e.g. Puerto Rico's pension exemption).
+  // The exempt amount is subtracted from ordinary retirement-plan withdrawals
+  // before tax; it steps up at `retirement_exclusion_age`. Today's dollars.
+  retirement_exclusion: 0,          // annual exempt amount before the step age
+  retirement_exclusion_senior: 0,   // annual exempt amount at/after the step age
+  retirement_exclusion_age: 60,     // age the higher exemption begins
+
   // Withdrawal buckets (Assets & Debts tab)
   cap_gains_rate: 0.15,
   cash_savings_rate: 0.02,
@@ -180,6 +187,12 @@ function progressiveTax(income: number, brackets: BracketRow[] | undefined, fact
 function rmdDivisor(age: number): number {
   if (age < 73) return 0.0;
   return RMD_TABLE[age] ?? RMD_TABLE[100];
+}
+
+/** Tax-free retirement-income exclusion for a given age (today's dollars). */
+function retirementExclusion(a: Assumptions, age: number): number {
+  const stepAge = num(a, "retirement_exclusion_age", 60);
+  return age >= stepAge ? num(a, "retirement_exclusion_senior", 0) : num(a, "retirement_exclusion", 0);
 }
 
 // ---- accumulation --------------------------------------------------------- //
@@ -333,8 +346,13 @@ function grossUpOrdinary(
   if (netNeeded <= 0) return [0.0, 0.0];
   if (!brackets || brackets.length === 0) {
     const r = Math.min(Math.max(flatRate, 0.0), 0.99);
-    const gross = netNeeded / (1 - r);
-    return [gross, gross * r];
+    // `deduction` is a tax-free exemption on ordinary income (standard deduction
+    // + retirement-income exclusion). It shelters the lowest ordinary income
+    // first, so only what's left after `base` applies to this withdrawal.
+    const remainingExempt = Math.max(deduction - base, 0);
+    if (netNeeded <= remainingExempt) return [netNeeded, 0.0];
+    const gross = remainingExempt + (netNeeded - remainingExempt) / (1 - r);
+    return [gross, (gross - remainingExempt) * r];
   }
   const rows = [...brackets].sort((x, y) => x.threshold - y.threshold);
   const thresholds = rows.map((b) => b.threshold * factor + deduction);
@@ -396,14 +414,17 @@ export function runDrawdown(
   const ordinaryTax = (income: number, deduction: number): number => {
     if (income <= 0) return 0.0;
     if (brackets && brackets.length) return progressiveTax(Math.max(income - deduction, 0.0), brackets, 1.0);
-    return income * flat401k;
+    return Math.max(income - deduction, 0.0) * flat401k; // exemption applies to the flat rate too
   };
 
   let year = startYear;
   for (let idx = 0; idx <= life - retAge; idx++) {
     const age = retAge + idx;
     const factor = index ? (1 + inflation) ** (year - bYear) : 1.0;
-    const deduction = num(a, "standard_deduction", 0.0) * factor;
+    // Ordinary-income exemption: the standard deduction plus the tax-free
+    // retirement-income exclusion (both today's dollars, indexed by `factor`).
+    // Subtracted from ordinary retirement-plan income before tax.
+    const deduction = (num(a, "standard_deduction", 0.0) + retirementExclusion(a, age)) * factor;
     const start = buckets.reduce((s, b) => s + b.value, 0);
 
     let growth = 0.0;

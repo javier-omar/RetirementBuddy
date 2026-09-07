@@ -15,18 +15,70 @@ const inputStyle = {
   padding: "6px 9px",
 } as const;
 
+const PR_BRACKETS: TaxBracketRow[] = [
+  { threshold: 0, rate: 0 },
+  { threshold: 9000, rate: 0.07 },
+  { threshold: 25000, rate: 0.14 },
+  { threshold: 41500, rate: 0.25 },
+  { threshold: 61500, rate: 0.33 },
+];
+const PR_EXCLUSION = { base: 11000, senior: 15000, age: 60 };
+
 export default function EventsTaxes() {
   const [events, setEvents] = useState<LifeEventRow[]>([]);
   const [brackets, setBrackets] = useState<TaxBracketRow[]>([]);
+  const [excl, setExcl] = useState({ base: 0, senior: 0, age: 60 });
   const [loading, setLoading] = useState(true);
   const [eventMsg, setEventMsg] = useState<Msg>(null);
   const [taxMsg, setTaxMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const [e, b] = await Promise.all([api.lifeEvents(), api.taxBrackets()]);
+    const [e, b, meta] = await Promise.all([api.lifeEvents(), api.taxBrackets(), api.assumptions()]);
     setEvents(e);
     setBrackets(b);
+    setExcl({
+      base: meta.assumptions.retirement_exclusion ?? 0,
+      senior: meta.assumptions.retirement_exclusion_senior ?? 0,
+      age: meta.assumptions.retirement_exclusion_age ?? 60,
+    });
+  }
+
+  async function saveExclusion() {
+    setBusy(true); setTaxMsg(null);
+    try {
+      await api.saveAssumptions({
+        retirement_exclusion: excl.base,
+        retirement_exclusion_senior: excl.senior,
+        retirement_exclusion_age: excl.age,
+      });
+      await load();
+      setTaxMsg({ kind: "ok", text: "Saved. The first slice of retirement-plan withdrawals is now tax-free." });
+    } catch (err) {
+      setTaxMsg({ kind: "error", text: (err as Error).message });
+    } finally { setBusy(false); }
+  }
+
+  async function loadPuertoRico() {
+    if (!confirm(
+      "Load Puerto Rico values?\n\nThis fills the progressive brackets (0/7/14/25/33%) and a tax-free "
+      + "retirement-income exclusion of $11,000 ($15,000 at age 60+), then saves them.\n\n"
+      + "It assumes your plan is qualified under Puerto Rico law (§1081.01). If it isn't, set the "
+      + "exclusion to 0. These are estimates — confirm with a CPA."
+    )) return;
+    setBusy(true); setTaxMsg(null);
+    try {
+      await api.saveTaxBrackets(PR_BRACKETS);
+      await api.saveAssumptions({
+        retirement_exclusion: PR_EXCLUSION.base,
+        retirement_exclusion_senior: PR_EXCLUSION.senior,
+        retirement_exclusion_age: PR_EXCLUSION.age,
+      });
+      await load();
+      setTaxMsg({ kind: "ok", text: "Loaded Puerto Rico brackets and the $11k/$15k retirement exclusion." });
+    } catch (err) {
+      setTaxMsg({ kind: "error", text: (err as Error).message });
+    } finally { setBusy(false); }
   }
 
   useEffect(() => {
@@ -170,6 +222,11 @@ export default function EventsTaxes() {
           withdrawals plus other income — Social Security keeps its own rate.
         </p>
 
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", margin: "0 0 12px" }}>
+          <button className="btn ghost sm" disabled={busy} onClick={loadPuertoRico}>🇵🇷 Load Puerto Rico values</button>
+          <span className="sub">fills the brackets and the retirement exclusion below</span>
+        </div>
+
         {brackets.length === 0 ? (
           <p className="muted">No brackets — using the flat rate.</p>
         ) : (
@@ -234,10 +291,39 @@ export default function EventsTaxes() {
           </div>
         )}
 
+        <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "18px 0 14px" }} />
+        <h3 style={{ fontSize: 14 }}>
+          Tax-free retirement income
+          <InfoTip align="left" text="A tax-free exemption subtracted from your retirement-plan (401k/IRA) withdrawals each year before tax — like Puerto Rico's pension exemption. It's per year in today's dollars, and can step up at a chosen age. Set 0 to disable. The exemption stacks on top of the 0% first bracket." />
+        </h3>
+        <p className="sub" style={{ marginTop: 0 }}>
+          The first slice of retirement-plan withdrawals that's exempt from income tax. Anything above it
+          is taxed by the brackets above (or the flat rate). Set 0 if it doesn't apply to you.
+        </p>
+        <div className="field-grid" style={{ maxWidth: 460 }}>
+          <div className="field">
+            <label>Exempt / yr ($)</label>
+            <MoneyInput value={excl.base} onValue={(n) => setExcl({ ...excl, base: n })} blankOnZero style={{ ...inputStyle, textAlign: "right" }} />
+            <span className="hint">before the step age</span>
+          </div>
+          <div className="field">
+            <label>Exempt at step age ($)</label>
+            <MoneyInput value={excl.senior} onValue={(n) => setExcl({ ...excl, senior: n })} blankOnZero style={{ ...inputStyle, textAlign: "right" }} />
+            <span className="hint">e.g. the higher amount at 60+</span>
+          </div>
+          <div className="field">
+            <label>Step age</label>
+            <input type="number" value={excl.age || ""} onChange={(e) => setExcl({ ...excl, age: parseInt(e.target.value) || 0 })} style={{ ...inputStyle, textAlign: "right" }} />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          <button className="btn" disabled={busy} onClick={saveExclusion}>{busy ? "Saving…" : "Save exclusion"}</button>
+        </div>
+
         <p className="sub" style={{ marginTop: 14 }}>
-          Set a <strong>standard deduction</strong> on the Projections tab to exempt the first
-          slice of income. Tax schedules vary by jurisdiction — use the figures that apply
-          to you, and confirm them with a CPA.
+          Tax schedules and exemptions vary by jurisdiction and by whether your plan is locally qualified —
+          use the figures that apply to you and <strong>confirm them with a CPA</strong>. You can also set a
+          <em> standard deduction</em> on the Projections tab.
         </p>
       </div>
     </div>
