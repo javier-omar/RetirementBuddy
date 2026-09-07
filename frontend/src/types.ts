@@ -84,6 +84,7 @@ export interface LoanRow {
   months_remaining: number;
   extra_payment_monthly: number;
   lump_sum_payoff_age: number;
+  start_age: number;
 }
 
 export interface LifeEventRow {

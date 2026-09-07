@@ -282,7 +282,7 @@ export const api = {
       .map((x) => ({
         id: nextId(), name: (x.name || "").trim(), balance: x.balance, annual_rate: x.annual_rate,
         months_remaining: Math.trunc(x.months_remaining), extra_payment_monthly: x.extra_payment_monthly,
-        lump_sum_payoff_age: Math.trunc(x.lump_sum_payoff_age),
+        lump_sum_payoff_age: Math.trunc(x.lump_sum_payoff_age), start_age: Math.trunc(x.start_age || 0),
       }));
     await persist();
     return [...data.loans];

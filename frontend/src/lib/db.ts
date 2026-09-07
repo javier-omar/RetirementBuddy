@@ -26,7 +26,7 @@ export interface OtherAssetRow {
 }
 export interface LoanRow {
   id?: number; name: string; balance: number; annual_rate: number; months_remaining: number;
-  extra_payment_monthly: number; lump_sum_payoff_age: number;
+  extra_payment_monthly: number; lump_sum_payoff_age: number; start_age: number;
 }
 
 export interface AppData {

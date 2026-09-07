@@ -91,5 +91,5 @@ export const sampleOtherAssets: OtherAssetRow[] = [
 ];
 
 export const sampleLoans: LoanRow[] = [
-  { name: "Mortgage", balance: 265000, annual_rate: 0.055, months_remaining: 312, extra_payment_monthly: 0, lump_sum_payoff_age: 0 },
+  { name: "Mortgage", balance: 265000, annual_rate: 0.055, months_remaining: 312, extra_payment_monthly: 0, lump_sum_payoff_age: 0, start_age: 0 },
 ];

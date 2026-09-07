@@ -148,6 +148,7 @@ export default function AssetsDebts() {
                   <th className="num">Balance ($)</th>
                   <th className="num">Rate %</th>
                   <th className="num">Months left</th>
+                  <th className="num">Start age</th>
                   <th className="num">Extra $/mo</th>
                   <th className="num">Lump payoff age</th>
                   <th></th>
@@ -160,6 +161,7 @@ export default function AssetsDebts() {
                     <td className="num"><MoneyInput value={l.balance} onValue={(n) => upL(i, { balance: n })} blankOnZero style={{ ...inp, width: 100, textAlign: "right" }} /></td>
                     <td className="num"><input type="number" step="0.125" value={+(l.annual_rate * 100).toFixed(4)} onChange={(e) => upL(i, { annual_rate: (parseFloat(e.target.value) || 0) / 100 })} style={{ ...inp, width: 70, textAlign: "right" }} /></td>
                     <td className="num"><input type="number" value={l.months_remaining || ""} onChange={(e) => upL(i, { months_remaining: parseInt(e.target.value) || 0 })} style={{ ...inp, width: 80, textAlign: "right" }} /></td>
+                    <td className="num"><input type="number" value={l.start_age || ""} placeholder="now" onChange={(e) => upL(i, { start_age: parseInt(e.target.value) || 0 })} style={{ ...inp, width: 70, textAlign: "right" }} /></td>
                     <td className="num"><MoneyInput value={l.extra_payment_monthly} onValue={(n) => upL(i, { extra_payment_monthly: n })} blankOnZero style={{ ...inp, width: 80, textAlign: "right" }} /></td>
                     <td className="num"><input type="number" value={l.lump_sum_payoff_age || ""} placeholder="—" onChange={(e) => upL(i, { lump_sum_payoff_age: parseInt(e.target.value) || 0 })} style={{ ...inp, width: 70, textAlign: "right" }} /></td>
                     <td className="num"><button className="btn danger sm" onClick={() => setLoans(loans.filter((_, j) => j !== i))}>✕</button></td>
@@ -170,11 +172,17 @@ export default function AssetsDebts() {
           </div>
         )}
         <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-          <button className="btn ghost" onClick={() => setLoans([...loans, { name: "", balance: 0, annual_rate: 0.055, months_remaining: 300, extra_payment_monthly: 0, lump_sum_payoff_age: 0 }])}>+ Add loan</button>
+          <button className="btn ghost" onClick={() => setLoans([...loans, { name: "", balance: 0, annual_rate: 0.055, months_remaining: 300, extra_payment_monthly: 0, lump_sum_payoff_age: 0, start_age: 0 }])}>+ Add loan</button>
           <button className="btn" disabled={busy} onClick={saveLoans}>{busy ? "Saving…" : "Save"}</button>
         </div>
         {lMsg && <div className={`banner ${lMsg.kind === "ok" ? "ok" : "error"}`} style={{ marginTop: 12 }}><span>{lMsg.kind === "ok" ? "✅" : "⚠️"}</span><span>{lMsg.text}</span></div>}
         <p className="sub" style={{ marginTop: 12 }}>
+          <strong>Future purchase?</strong> Set a <em>Start age</em> (blank = already active) to model a loan
+          you'll take out later — e.g. financing a car at 62. Enter the financed amount as the balance; add the
+          down payment as a one-off outflow on the <em>Events &amp; Taxes</em> tab. Loans only affect spending
+          once you're in retirement.
+        </p>
+        <p className="sub" style={{ marginTop: 8 }}>
           <strong>Early payoff:</strong> add an <em>extra $/mo</em> to shorten the loan, or set a
           <em> lump payoff age</em> to clear the remaining balance from your portfolio in that year.
           Compare the effect on the Projections and Drawdown tabs.

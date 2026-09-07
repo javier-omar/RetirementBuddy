@@ -21,7 +21,7 @@ export interface AssetRow {
 }
 export interface LoanInput {
   name?: string; balance: number; annual_rate: number; months_remaining: number;
-  extra_payment_monthly: number; lump_sum_payoff_age: number;
+  extra_payment_monthly: number; lump_sum_payoff_age: number; start_age?: number;
 }
 
 interface Bucket {
@@ -315,10 +315,14 @@ function loanSchedules(loans: LoanInput[] | undefined, a: Assumptions): LoanSche
     else pmt = 0.0;
     pmt += Number(loan.extra_payment_monthly || 0.0);
     const lumpAge = Math.trunc(loan.lump_sum_payoff_age || 0) || 0;
+    // A future loan (start age beyond today) doesn't begin amortizing until then;
+    // 0 / past means it's already active, so start from the current age.
+    const startAge = Math.trunc(loan.start_age || 0);
+    const effStart = startAge > curAge ? startAge : curAge;
     let month = 0;
     let payoffAge: number | null = null;
     while (bal > 0.01 && month < 1200) {
-      const age = curAge + Math.trunc(month / 12);
+      const age = effStart + Math.trunc(month / 12);
       if (lumpAge && age >= lumpAge) {
         lumpByAge[age] = (lumpByAge[age] || 0) + bal;
         payoffAge = age;
@@ -333,7 +337,7 @@ function loanSchedules(loans: LoanInput[] | undefined, a: Assumptions): LoanSche
       paymentByAge[age] = (paymentByAge[age] || 0) + pay;
       month += 1;
     }
-    if (bal <= 0.01 && payoffAge === null) payoffAge = curAge + Math.trunc((month - 1) / 12);
+    if (bal <= 0.01 && payoffAge === null) payoffAge = effStart + Math.trunc((month - 1) / 12);
     payoffs.push({ name: loan.name || "Loan", payoff_age: payoffAge });
   }
   return { payment_by_age: paymentByAge, lump_by_age: lumpByAge, payoffs };
