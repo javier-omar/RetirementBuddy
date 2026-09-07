@@ -171,6 +171,7 @@ export default function Projections({ hasData }: { hasData: boolean }) {
   const [pending, setPending] = useState(false);
   const [ssFromTable, setSsFromTable] = useState<number | null>(null);
   const [hasBrackets, setHasBrackets] = useState(false);
+  const [hasAssets, setHasAssets] = useState(false);
   const [delta, setDelta] = useState<number | null>(null);
   const didInit = useRef(false);
   const prevPortfolio = useRef<number | null>(null);
@@ -184,6 +185,7 @@ export default function Projections({ hasData }: { hasData: boolean }) {
       setSsFromTable(r.ss_benefit_from_table);
     });
     api.taxBrackets().then((b) => setHasBrackets(b.length > 0));
+    api.otherAssets().then((a) => setHasAssets(a.length > 0));
   }, []);
 
   async function recalc(a: Assumptions, real = realDollars) {
@@ -300,9 +302,15 @@ export default function Projections({ hasData }: { hasData: boolean }) {
     }
     const warn = sanityWarning(f.key, assumptions);
     const derived = derivedHint(f.key, assumptions);
-    // The flat ordinary-income rates are only used when no progressive brackets
-    // are set; with brackets, 401(k) and other-income are taxed by the brackets.
-    const overridden = (f.key === "tax_rate_401k" || f.key === "tax_rate_other_income") && hasBrackets;
+    // Some Projections fields are fallbacks superseded by a dedicated tab.
+    let overrideNote: string | null = null;
+    if ((f.key === "tax_rate_401k" || f.key === "tax_rate_other_income") && hasBrackets) {
+      // Flat ordinary-income rates are unused once progressive brackets are set.
+      overrideNote = "overridden by tax brackets (Events & Taxes)";
+    } else if (f.key === "other_assets_today" && hasAssets) {
+      // This single field is a legacy fallback for the Assets & Debts table.
+      overrideNote = "overridden by the Assets & Debts tab";
+    }
     return (
       <div className="field" key={f.key}>
         <label>
@@ -329,7 +337,7 @@ export default function Projections({ hasData }: { hasData: boolean }) {
           <span className="hint warn">⚠ {warn}</span>
         ) : (
           <>
-            {overridden && <span className="hint warn">overridden by tax brackets (Events &amp; Taxes)</span>}
+            {overrideNote && <span className="hint warn">{overrideNote}</span>}
             {derived && <span className="hint derived">{derived}</span>}
             {f.hint && <span className="hint">{f.hint}</span>}
           </>
