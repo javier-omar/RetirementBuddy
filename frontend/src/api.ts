@@ -297,13 +297,13 @@ export const api = {
     ) as unknown as ProjectionResult;
   },
 
-  monteCarlo: async (overrides: Assumptions, nSims = 2000): Promise<MonteCarloResult> => {
+  monteCarlo: async (overrides: Assumptions, nSims = 2000, realDollars = false): Promise<MonteCarloResult> => {
     await ensure();
     const a = computeAssumptions(overrides);
     const n = Math.max(100, Math.min(nSims, 20000));
     return engine.monteCarlo(
       a, currentBalance(), undefined, n, 42,
-      loadEvents(), loadBrackets(), loadAssets(a), loadLoans(),
+      loadEvents(), loadBrackets(), loadAssets(a), loadLoans(), realDollars,
     ) as unknown as MonteCarloResult;
   },
 

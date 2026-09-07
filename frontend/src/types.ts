@@ -220,7 +220,9 @@ export interface CoastFireResult {
 
 export interface MonteCarloResult {
   n_sims: number;
+  real_dollars?: boolean;
   success_rate: number;
   retirement_balance_percentiles: { p10: number; p50: number; p90: number };
   ending_balance_percentiles: { p10: number; p50: number; p90: number };
+  balance_percentiles?: { age: number; p10: number; p50: number; p90: number }[];
 }

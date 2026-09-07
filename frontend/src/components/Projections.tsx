@@ -3,6 +3,8 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  ComposedChart,
+  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -195,7 +197,7 @@ export default function Projections({ hasData }: { hasData: boolean }) {
       await api.saveAssumptions(a);
       const [p, m, meta] = await Promise.all([
         api.projection({}, real),
-        api.monteCarlo({}, 2000),
+        api.monteCarlo({}, 2000, real),
         api.assumptions(),
       ]);
       const newPortfolio = p.summary.portfolio_at_retirement;
@@ -529,8 +531,8 @@ export default function Projections({ hasData }: { hasData: boolean }) {
               {mc && (
                 <div className="card">
                   <h3>
-                    Monte Carlo — {mc.n_sims.toLocaleString()} randomized market simulations
-                    <InfoTip align="left" text="Instead of one fixed return, this runs your plan thousands of times with random year-to-year returns and reports how often the money lasted." />
+                    Monte Carlo — {mc.n_sims.toLocaleString()} randomized market simulations{mc.real_dollars ? " (today's dollars)" : ""}
+                    <InfoTip align="left" text="Instead of one fixed return, this runs your plan thousands of times with random year-to-year returns and reports how often the money lasted, plus the spread of outcomes." />
                   </h3>
                   <div className="gauge-wrap">
                     <Gauge value={mc.success_rate} />
@@ -538,14 +540,60 @@ export default function Projections({ hasData }: { hasData: boolean }) {
                       <div className="muted" style={{ fontSize: 13 }}>
                         of simulations funded spending through age {assumptions.life_expectancy}.
                       </div>
-                      <div style={{ marginTop: 14, display: "flex", gap: 22, flexWrap: "wrap" }}>
-                        <Pctile label="Unlucky (10th %)" v={mc.retirement_balance_percentiles.p10} />
-                        <Pctile label="Median (50th %)" v={mc.retirement_balance_percentiles.p50} />
-                        <Pctile label="Lucky (90th %)" v={mc.retirement_balance_percentiles.p90} />
+                      <div style={{ display: "flex", gap: 26, flexWrap: "wrap", marginTop: 14 }}>
+                        <div>
+                          <div className="sub" style={{ fontWeight: 700, marginBottom: 6 }}>Portfolio at retirement</div>
+                          <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                            <Pctile label="Unlucky (10th)" v={mc.retirement_balance_percentiles.p10} />
+                            <Pctile label="Median (50th)" v={mc.retirement_balance_percentiles.p50} />
+                            <Pctile label="Lucky (90th)" v={mc.retirement_balance_percentiles.p90} />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="sub" style={{ fontWeight: 700, marginBottom: 6 }}>Left at age {assumptions.life_expectancy}</div>
+                          <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                            <Pctile label="Unlucky (10th)" v={mc.ending_balance_percentiles.p10} />
+                            <Pctile label="Median (50th)" v={mc.ending_balance_percentiles.p50} />
+                            <Pctile label="Lucky (90th)" v={mc.ending_balance_percentiles.p90} />
+                          </div>
+                        </div>
                       </div>
-                      <div className="sub" style={{ marginTop: 8 }}>Range of portfolio value at retirement across outcomes.</div>
                     </div>
                   </div>
+
+                  {mc.balance_percentiles && mc.balance_percentiles.length > 0 && (
+                    <>
+                      <div className="sub" style={{ margin: "16px 0 4px", fontWeight: 700 }}>
+                        Range of outcomes through retirement
+                      </div>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <ComposedChart
+                          data={mc.balance_percentiles.map((d) => ({ age: d.age, band: [d.p10, d.p90], p50: d.p50 }))}
+                          margin={{ left: 8, right: 12, top: 6, bottom: 4 }}
+                        >
+                          <CartesianGrid stroke={c.grid} vertical={false} />
+                          <XAxis dataKey="age" tick={{ stroke: c.axis, fontSize: 12 }} />
+                          <YAxis tick={{ stroke: c.axis, fontSize: 12 }} tickFormatter={(v) => usdCompact(v)} width={62} />
+                          <Tooltip
+                            formatter={(v: number | number[], n) =>
+                              Array.isArray(v)
+                                ? [`${usd(v[0])} – ${usd(v[1])}`, "10th–90th %"]
+                                : [usd(v), n === "p50" ? "Median" : String(n)]
+                            }
+                            labelFormatter={(a) => `Age ${a}`}
+                            contentStyle={{ background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 10 }}
+                          />
+                          <ReferenceLine y={0} stroke={c.red} strokeDasharray="3 3" />
+                          <Area type="monotone" dataKey="band" stroke="none" fill={c.accent} fillOpacity={0.18} isAnimationActive={false} />
+                          <Line type="monotone" dataKey="p50" stroke={c.accent} strokeWidth={2.2} dot={false} isAnimationActive={false} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                      <div className="sub" style={{ marginTop: 6 }}>
+                        Shaded band = the middle 80% of outcomes (10th–90th percentile); the line is the median.
+                        The band widening shows how uncertainty compounds over time.
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

@@ -823,6 +823,7 @@ function mulberry32(seed: number): () => number {
 export function monteCarlo(
   assumptions: Assumptions | null, startBalance: number, startYear?: number, nSims = 1000,
   seed = 42, events?: EventRow[], brackets?: BracketRow[], assets?: AssetRow[], loans?: LoanInput[],
+  realDollars = false,
 ) {
   const a = merged(assumptions);
   const sYear = startYear || new Date().getFullYear();
@@ -838,9 +839,15 @@ export function monteCarlo(
   const curAge = Math.trunc(a.current_age), retAge = Math.trunc(a.retirement_age), life = Math.trunc(a.life_expectancy);
   const retYear = sYear + (retAge - curAge);
 
+  // Deflate to today's dollars when asked, so the ranges/fan match the balance
+  // chart's toggle. A value at `age` occurs (age - curAge) years from today.
+  const deflate = (v: number, age: number): number =>
+    realDollars ? v / (1 + a.inflation) ** (age - curAge) : v;
+
   let successes = 0;
   const endingBalances: number[] = [];
   const retirementBalances: number[] = [];
+  const perAge: number[][] = []; // perAge[i] = end balances at retirement-year i across sims
 
   for (let s = 0; s < nSims; s++) {
     let balance = startBalance;
@@ -859,10 +866,11 @@ export function monteCarlo(
     const marketReturns: number[] = [];
     for (let age = retAge; age <= life; age++) marketReturns.push(gauss(mu, sigma));
     const dd = runDrawdown(a, balance, retYear, sYear, events, brackets, assets, loans, marketReturns);
-    retirementBalances.push(dd.length ? dd[0].start_balance : balance);
+    retirementBalances.push(deflate(dd.length ? dd[0].start_balance : balance, retAge));
     const depleted = dd.some((row) => row.end_balance <= 0);
     if (!depleted) successes += 1;
-    endingBalances.push(dd.length ? dd[dd.length - 1].end_balance : balance);
+    endingBalances.push(deflate(dd.length ? dd[dd.length - 1].end_balance : balance, life));
+    for (let i = 0; i < dd.length; i++) (perAge[i] ??= []).push(deflate(dd[i].end_balance, dd[i].age));
   }
 
   endingBalances.sort((x, y) => x - y);
@@ -873,10 +881,17 @@ export function monteCarlo(
     return round(vals[idx]);
   };
 
+  const balance_percentiles = perAge.map((arr, i) => {
+    arr.sort((x, y) => x - y);
+    return { age: retAge + i, p10: pct(arr, 0.1), p50: pct(arr, 0.5), p90: pct(arr, 0.9) };
+  });
+
   return {
     n_sims: nSims,
+    real_dollars: realDollars,
     success_rate: round(successes / nSims, 4),
     retirement_balance_percentiles: { p10: pct(retirementBalances, 0.1), p50: pct(retirementBalances, 0.5), p90: pct(retirementBalances, 0.9) },
     ending_balance_percentiles: { p10: pct(endingBalances, 0.1), p50: pct(endingBalances, 0.5), p90: pct(endingBalances, 0.9) },
+    balance_percentiles,
   };
 }
