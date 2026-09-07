@@ -190,6 +190,12 @@ export interface ScenarioInput {
   overrides: Record<string, number>;
 }
 
+export interface SavedScenario {
+  id: number;
+  name: string;
+  overrides: Record<string, number>;
+}
+
 export interface CoastFirePoint {
   stop_age: number;
   retirement_balance: number;

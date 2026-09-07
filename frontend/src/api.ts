@@ -18,6 +18,7 @@ import type {
   LifeEventRow,
   LoanRow,
   OtherAssetRow,
+  SavedScenario,
   ScenarioInput,
   SSBenefitRow,
   TaxBracketRow,
@@ -327,10 +328,30 @@ export const api = {
     ) as unknown as DrawdownScenariosResult;
   },
 
+  // ---- saved "what-if" scenarios (Compare tab) ----------------------------- //
+  savedScenarios: async (): Promise<SavedScenario[]> => {
+    await ensure();
+    return data.scenarios.map((s) => ({ id: s.id, name: s.name, overrides: { ...s.overrides } }));
+  },
+  saveScenarios: async (list: SavedScenario[]): Promise<SavedScenario[]> => {
+    await ensure();
+    data.scenarios = list.map((s) => ({
+      id: s.id || nextId(),
+      name: (s.name || "").trim() || "Scenario",
+      overrides: Object.fromEntries(
+        Object.entries(s.overrides || {})
+          .filter(([, v]) => v !== null && v !== undefined && !Number.isNaN(Number(v)))
+          .map(([k, v]) => [k, Number(v)]),
+      ),
+    }));
+    await persist();
+    return data.scenarios.map((s) => ({ id: s.id, name: s.name, overrides: { ...s.overrides } }));
+  },
+
   // ---- sample / demo data -------------------------------------------------- //
   loadSample: async (): Promise<void> => {
     await ensure();
-    const { sampleCsv, sampleAssumptions, sampleSSBenefits, sampleOtherAssets, sampleLoans } =
+    const { sampleCsv, sampleAssumptions, sampleSSBenefits, sampleOtherAssets, sampleLoans, sampleScenarios } =
       await import("./lib/sampleData");
     // Fresh slate, then seed a full demo across every tab.
     data = emptyData();
@@ -345,6 +366,7 @@ export const api = {
     data.ssBenefits = sampleSSBenefits.map((b) => ({ ...b }));
     data.otherAssets = sampleOtherAssets.map((a) => ({ ...a, id: nextId() }));
     data.loans = sampleLoans.map((l) => ({ ...l, id: nextId() }));
+    data.scenarios = sampleScenarios.map((s) => ({ ...s, id: nextId(), overrides: { ...s.overrides } }));
     data.onboarded = true;
     await persist();
   },

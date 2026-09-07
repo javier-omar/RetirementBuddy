@@ -28,6 +28,9 @@ export interface LoanRow {
   id?: number; name: string; balance: number; annual_rate: number; months_remaining: number;
   extra_payment_monthly: number; lump_sum_payoff_age: number; start_age: number;
 }
+/** A named "what-if" variant of the plan: only the assumptions that differ from
+ * the live base plan are stored, so unchanged fields track the base. */
+export interface SavedScenario { id: number; name: string; overrides: Record<string, number> }
 
 export interface AppData {
   version: number;
@@ -40,6 +43,7 @@ export interface AppData {
   taxBrackets: TaxBracketRow[];
   otherAssets: OtherAssetRow[];
   loans: LoanRow[];
+  scenarios: SavedScenario[];     // saved "what-if" plan variants (Compare tab)
   seq: number;                    // monotonic id source
 }
 
@@ -50,7 +54,7 @@ export function emptyData(): AppData {
     version: DATA_VERSION,
     onboarded: false,
     transactions: [], batches: [], assumptions: {},
-    ssBenefits: [], lifeEvents: [], taxBrackets: [], otherAssets: [], loans: [],
+    ssBenefits: [], lifeEvents: [], taxBrackets: [], otherAssets: [], loans: [], scenarios: [],
     seq: 1,
   };
 }

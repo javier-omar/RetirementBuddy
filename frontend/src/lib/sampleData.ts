@@ -7,7 +7,7 @@
  * flows through the exact same parser/import path as a user's own file.
  */
 import type { Assumptions } from "../types";
-import type { OtherAssetRow, LoanRow, SSBenefitRow } from "./db";
+import type { OtherAssetRow, LoanRow, SSBenefitRow, SavedScenario } from "./db";
 
 const FUND = "Vanguard 500 Index Fund";
 const TICKER = "VFIAX";
@@ -92,4 +92,10 @@ export const sampleOtherAssets: OtherAssetRow[] = [
 
 export const sampleLoans: LoanRow[] = [
   { name: "Mortgage", balance: 265000, annual_rate: 0.055, months_remaining: 312, extra_payment_monthly: 0, lump_sum_payoff_age: 0, start_age: 0 },
+];
+
+/** A couple of ready-made "what-if" variants so the Compare tab isn't empty. */
+export const sampleScenarios: SavedScenario[] = [
+  { id: 0, name: "Retire at 60", overrides: { retirement_age: 60 } },
+  { id: 0, name: "Lean spending", overrides: { annual_spending: 45000 } },
 ];

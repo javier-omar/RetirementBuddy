@@ -6,6 +6,7 @@ import ImportPanel from "./components/ImportPanel";
 import Dashboard from "./components/Dashboard";
 import Projections from "./components/Projections";
 import DrawdownScenarios from "./components/DrawdownScenarios";
+import ScenarioCompare from "./components/ScenarioCompare";
 import CoastFire from "./components/CoastFire";
 import SocialSecurity from "./components/SocialSecurity";
 import EventsTaxes from "./components/EventsTaxes";
@@ -22,12 +23,13 @@ import type {
   YearContribution,
 } from "./types";
 
-type Tab = "dashboard" | "projections" | "drawdown" | "coast" | "social" | "assets" | "events" | "transactions" | "import";
+type Tab = "dashboard" | "projections" | "drawdown" | "compare" | "coast" | "social" | "assets" | "events" | "transactions" | "import";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
   { id: "projections", label: "Projections" },
   { id: "drawdown", label: "Drawdown" },
+  { id: "compare", label: "Compare" },
   { id: "coast", label: "Coast FIRE" },
   { id: "social", label: "Social Security" },
   { id: "assets", label: "Assets & Debts" },
@@ -148,6 +150,8 @@ export default function App() {
           {tab === "projections" && <Projections hasData={hasData} />}
 
           {tab === "drawdown" && <DrawdownScenarios hasData={hasData} />}
+
+          {tab === "compare" && <ScenarioCompare hasData={hasData} />}
 
           {tab === "coast" && <CoastFire hasData={hasData} />}
 
