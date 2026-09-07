@@ -26,6 +26,7 @@ export default function CoastFire({ hasData }: { hasData: boolean }) {
   const [realDollars, setRealDollars] = useState(false);
   const [goalMode, setGoalMode] = useState<"auto" | "custom">("auto");
   const [goal, setGoal] = useState<number>(0);
+  const [appliedAge, setAppliedAge] = useState<number | null>(null);
   const didInit = useRef(false);
   const c = useChartColors();
 
@@ -50,6 +51,21 @@ export default function CoastFire({ hasData }: { hasData: boolean }) {
       const target = mode === "custom" ? (value ?? goal) : 0;
       await api.saveAssumptions({ retirement_goal_today: target });
       await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Write this coast age into the plan so Projections, Drawdown, Monte Carlo
+   *  and Compare all model stopping contributions at that age. */
+  async function applyCoast() {
+    if (!cf) return;
+    const age = cf.is_coasting_now ? cf.current_age : cf.coast_age;
+    if (age == null) return;
+    setBusy(true);
+    try {
+      await api.saveAssumptions({ coast_age: age, coast_contrib_pct: 0 });
+      setAppliedAge(age);
     } finally {
       setBusy(false);
     }
@@ -170,6 +186,23 @@ export default function CoastFire({ hasData }: { hasData: boolean }) {
           <span className={`chip ${verdict.chipClass}`} style={{ fontSize: 14, padding: "5px 12px" }}>{verdict.chip}</span>
         </div>
         <p style={{ marginBottom: 0, marginTop: 10, lineHeight: 1.5 }}>{verdict.line}</p>
+        {(cf.coast_age !== null || cf.is_coasting_now) && (
+          <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <button className="btn sm" disabled={busy} onClick={applyCoast}>
+              Apply this coast age to my plan
+            </button>
+            {appliedAge !== null ? (
+              <span className="sub" style={{ color: "var(--green)" }}>
+                ✓ Contributions now stop at age {appliedAge} across Projections, Drawdown, Monte Carlo &amp; Compare.
+                Change or turn it off under “Coast / barista FIRE” on the Projections tab.
+              </span>
+            ) : (
+              <span className="sub">
+                Sets contributions to stop at your coast age everywhere else in the app, so you can see the full drawdown.
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid cols-4" style={{ marginBottom: 16, opacity: busy ? 0.6 : 1 }}>

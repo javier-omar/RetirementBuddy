@@ -75,6 +75,12 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = {
   contrib_escalation: 0.0,
   contrib_escalation_cap: 0.0,
 
+  // Coast / barista FIRE: from `coast_age` onward, contribute `coast_contrib_pct`
+  // of salary instead of the normal (escalating) rate. 0% = stop entirely.
+  // `coast_age` of 0 disables coasting (contribute normally to retirement).
+  coast_age: 0,
+  coast_contrib_pct: 0.0,
+
   // Roth
   roth_share: 0.0,
 
@@ -157,6 +163,15 @@ function escalate(a: Assumptions, empPct: number): number {
   return cap > 0 ? Math.min(nxt, cap) : nxt;
 }
 
+/** Employee contribution % actually used at `age`, honoring a coast plan: once
+ * `coast_age` is reached, contributions switch to `coast_contrib_pct`
+ * (0 = stop entirely). `basePct` is the normally-escalating percentage. */
+function effContribPct(a: Assumptions, age: number, basePct: number): number {
+  const coastAge = Math.trunc(num(a, "coast_age", 0));
+  if (coastAge > 0 && age >= coastAge) return Math.max(num(a, "coast_contrib_pct", 0.0), 0.0);
+  return basePct;
+}
+
 function eventsByAge(events: EventRow[] | undefined): Record<number, number> {
   const out: Record<number, number> = {};
   for (const e of events || []) {
@@ -216,8 +231,9 @@ export function runAccumulation(
   let empPct = a.employee_contrib_pct;
   const byAge = eventsByAge(events);
   while (age < retAge) {
-    const uncapped = salary * empPct;
-    const [employee, employer] = contributions(a, salary, age, empPct, year, startYear);
+    const effPct = effContribPct(a, age, empPct);
+    const uncapped = salary * effPct;
+    const [employee, employer] = contributions(a, salary, age, effPct, year, startYear);
     const contrib = employee + employer;
     // Enhancement: balance grows a full year, contributions ~half a year.
     const growth = balance * r + contrib * (Math.sqrt(1 + r) - 1);
@@ -856,7 +872,7 @@ export function monteCarlo(
     let year = sYear;
     for (let age = curAge; age < retAge; age++) {
       const r = gauss(mu, sigma);
-      const [employee, employer] = contributions(a, salary, age, empPct, year, sYear);
+      const [employee, employer] = contributions(a, salary, age, effContribPct(a, age, empPct), year, sYear);
       const contrib = employee + employer;
       balance = Math.max(balance * (1 + r) + contrib * Math.sqrt(Math.max(1 + r, 0.0)), 0.0);
       salary *= 1 + a.salary_growth;

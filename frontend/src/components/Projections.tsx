@@ -61,6 +61,13 @@ const ADVANCED: Group[] = [
     ],
   },
   {
+    title: "Coast / barista FIRE",
+    fields: [
+      { key: "coast_age", label: "Slow down at age", type: "age", hint: "0 = never (contribute normally)", tip: "The age you stop or cut back contributions and let the balance 'coast' to retirement on growth alone. Applies to every tab — Projections, Drawdown, Monte Carlo and Compare. Set 0 to turn coasting off." },
+      { key: "coast_contrib_pct", label: "Contribution after that", type: "pct", hint: "0 = stop entirely", tip: "The share of salary you keep contributing from the coast age onward — 0 to fully stop, or a smaller number for 'barista FIRE'. Employer match scales with it." },
+    ],
+  },
+  {
     title: "Contribution limits",
     fields: [
       { key: "limit_employee_deferral", label: "Your annual cap", type: "money", hint: "0 = no limit", tip: "The most you may defer from pay in a year. Caps vary by jurisdiction and plan type — set whichever applies to yours." },
@@ -159,6 +166,17 @@ function derivedHint(key: string, a: Assumptions): string | null {
   if (key === "nominal_return") {
     const real = (1 + (a.nominal_return ?? 0)) / (1 + (a.inflation ?? 0)) - 1;
     return `≈ ${(real * 100).toFixed(1)}% real, after inflation`;
+  }
+  if (key === "coast_age") {
+    const coastAge = Math.trunc(a.coast_age ?? 0);
+    if (coastAge <= 0) return "off — you contribute normally to retirement";
+    if (coastAge <= (a.current_age ?? 0)) return "coasting already (at or before your current age)";
+    return `contribute for ${coastAge - Math.trunc(a.current_age ?? 0)} more yr, then coast`;
+  }
+  if (key === "coast_contrib_pct") {
+    if ((a.coast_age ?? 0) <= 0) return "only applies once a coast age is set";
+    const dollars = (a.current_salary ?? 0) * (a.coast_contrib_pct ?? 0);
+    return (a.coast_contrib_pct ?? 0) <= 0 ? "= stop contributing entirely" : `≈ ${usd(dollars)}/yr in today's salary`;
   }
   return null;
 }
@@ -492,6 +510,14 @@ export default function Projections({ hasData }: { hasData: boolean }) {
               <div className="card">
                 <h3>
                   Projected balance{proj.real_dollars ? " (today's dollars)" : ""}
+                  {(assumptions.coast_age ?? 0) > 0 && (
+                    <span className="chip green" style={{ marginLeft: 8, verticalAlign: "middle" }}>
+                      coasting from {Math.trunc(assumptions.coast_age)}
+                      {(assumptions.coast_contrib_pct ?? 0) > 0
+                        ? ` @ ${+(assumptions.coast_contrib_pct * 100).toFixed(1)}%`
+                        : " (contributions stop)"}
+                    </span>
+                  )}
                   {cashInfo && <span className="sub"> — green total, amber = cash from over-withdrawal</span>}
                 </h3>
                 <ResponsiveContainer width="100%" height={330}>

@@ -162,6 +162,9 @@ export default function DrawdownScenarios({ hasData }: { hasData: boolean }) {
             <div className="sub">
               Every scenario starts from the same {result ? usd(result.base_portfolio_at_retirement) : "…"} nest egg at age {assumptions.retirement_age},
               then draws down under a different assumption — so you see retirement (sequence) risk in isolation.
+              {(assumptions.coast_age ?? 0) > 0 && (
+                <> This nest egg already reflects coasting from age {Math.trunc(assumptions.coast_age)} (set on the Projections tab).</>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>

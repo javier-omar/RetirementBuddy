@@ -31,6 +31,8 @@ const FIELDS: { key: string; label: string; kind: FieldKind }[] = [
   { key: "nominal_return", label: "Return", kind: "pct" },
   { key: "inflation", label: "Inflation", kind: "pct" },
   { key: "employee_contrib_pct", label: "Contribution", kind: "pct" },
+  { key: "coast_age", label: "Coast age (0=off)", kind: "age" },
+  { key: "coast_contrib_pct", label: "Post-coast contrib", kind: "pct" },
   { key: "current_salary", label: "Salary", kind: "money" },
   { key: "ss_claim_age", label: "SS claim age", kind: "age" },
   { key: "life_expectancy", label: "Plan to age", kind: "age" },
