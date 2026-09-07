@@ -130,9 +130,13 @@ export interface DrawdownRow {
   withdrawal: number;
   rmd: number;
   social_security: number;
+  other_income?: number;
   tax_401k: number;
+  tax_capgains?: number;
   tax_ss: number;
+  tax_other?: number;
   after_tax_income: number;
+  healthcare?: number;
   spending: number;
   net_cash_flow: number;
   end_balance: number;

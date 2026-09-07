@@ -258,6 +258,11 @@ export default function Projections({ hasData }: { hasData: boolean }) {
     return { endCash, avgSurplus, suggested };
   }, [proj, assumptions, ssFromTable]);
 
+  const totalTax = useMemo(
+    () => (proj ? proj.drawdown.reduce((s, r) => s + taxOf(r), 0) : 0),
+    [proj],
+  );
+
   if (!assumptions) return <div className="center-load"><div className="spinner" /> Loading assumptions…</div>;
 
   const retAge = assumptions.retirement_age;
@@ -529,6 +534,47 @@ export default function Projections({ hasData }: { hasData: boolean }) {
                   </div>
                 </div>
               )}
+
+              {proj.drawdown.length > 0 && (
+                <div className="card">
+                  <h3 style={{ marginBottom: 4 }}>
+                    Year-by-year retirement detail{proj.real_dollars ? " (today's dollars)" : ""}
+                    <InfoTip align="left" text="Each retirement year: the gross withdrawal, the income tax paid on it (401(k)/other income + capital gains + Social Security tax, after any tax-free exclusion), Social Security received, what's left after tax, your spending, and the ending balance." />
+                  </h3>
+                  <p className="sub" style={{ marginTop: 0, marginBottom: 12 }}>
+                    Total income tax over retirement: <strong>{usd(totalTax)}</strong>
+                    {" · "}first-year effective rate {proj.drawdown[0].withdrawal > 0 ? pct(taxOf(proj.drawdown[0]) / proj.drawdown[0].withdrawal, 1) : "0%"}.
+                  </p>
+                  <div style={{ overflowX: "auto", maxHeight: 360, overflowY: "auto" }}>
+                    <table className="data">
+                      <thead>
+                        <tr>
+                          <th className="num">Age</th>
+                          <th className="num">Withdrawal</th>
+                          <th className="num">Taxes</th>
+                          <th className="num">Soc. Sec.</th>
+                          <th className="num">After-tax</th>
+                          <th className="num">Spending</th>
+                          <th className="num">End balance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {proj.drawdown.map((r) => (
+                          <tr key={r.age}>
+                            <td className="num">{r.age}</td>
+                            <td className="num">{usd(r.withdrawal)}</td>
+                            <td className="num" style={{ color: taxOf(r) > 0 ? "var(--amber)" : undefined }}>{usd(taxOf(r))}</td>
+                            <td className="num">{r.social_security ? usd(r.social_security) : "—"}</td>
+                            <td className="num">{usd(r.after_tax_income)}</td>
+                            <td className="num">{usd(r.spending)}</td>
+                            <td className="num">{usd(r.end_balance)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </>
           )}
           {!proj && <div className="center-load"><div className="spinner" /> Running projection…</div>}
@@ -536,6 +582,11 @@ export default function Projections({ hasData }: { hasData: boolean }) {
       </div>
     </>
   );
+}
+
+/** Total income tax for a drawdown year (income tax + capital gains + SS tax). */
+function taxOf(r: { tax_401k?: number; tax_capgains?: number; tax_ss?: number; tax_other?: number }): number {
+  return (r.tax_401k ?? 0) + (r.tax_capgains ?? 0) + (r.tax_ss ?? 0) + (r.tax_other ?? 0);
 }
 
 function Pctile({ label, v }: { label: string; v: number }) {
