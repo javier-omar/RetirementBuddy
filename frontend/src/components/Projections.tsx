@@ -300,8 +300,9 @@ export default function Projections({ hasData }: { hasData: boolean }) {
     }
     const warn = sanityWarning(f.key, assumptions);
     const derived = derivedHint(f.key, assumptions);
-    // The flat 401(k) rate is only used when no progressive brackets are set.
-    const overridden = f.key === "tax_rate_401k" && hasBrackets;
+    // The flat ordinary-income rates are only used when no progressive brackets
+    // are set; with brackets, 401(k) and other-income are taxed by the brackets.
+    const overridden = (f.key === "tax_rate_401k" || f.key === "tax_rate_other_income") && hasBrackets;
     return (
       <div className="field" key={f.key}>
         <label>
